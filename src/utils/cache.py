@@ -10,7 +10,7 @@ from fastapi_cache.backends.redis import RedisBackend
 from bson import ObjectId
 from fastapi import Request
 
-from src.utils.logger import logger
+from src import logger
 
 
 class Cache:

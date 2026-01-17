@@ -1,13 +1,12 @@
 import certifi
 from functools import wraps
-from logging import getLogger
 from typing import Any, Callable, Optional, TypeVar, cast
 from urllib.parse import quote_plus
 
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 
-logger = getLogger(__name__)
+from src import logger
 
 T = TypeVar("T")
 F = TypeVar("F", bound=Callable[..., Any])
