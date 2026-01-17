@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Run all tests for the agent
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+# Check if poetry is installed
+if ! command -v poetry &> /dev/null; then
+    echo "❌ Poetry not found. Install with: pip install poetry"
+    exit 1
+fi
+
+echo "🧪 Running all tests..."
+echo ""
+
+# Run pytest - it will discover and run all tests in tests/ directory
+poetry run pytest -v
+
+echo ""
+echo "✅ All tests passed!"
+echo ""
+echo "💡 Add custom tests in tests/ directory:"
+echo "   - tests/test_tools.py"
+echo "   - tests/test_custom.py"
+echo "   All test files will be discovered automatically by pytest"
+echo ""

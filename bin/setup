@@ -1,0 +1,83 @@
+#!/bin/bash
+
+# Setup the agent project
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+# Get parameters or use defaults
+PROJECT_NAME=${1:-"my-agent"}
+DESCRIPTION=${2:-"AI agent built with deepagents"}
+AUTHOR=${3:-"Your Name <you@example.com>"}
+
+echo "🤖 Setting up your agent project..."
+echo ""
+
+# Check if poetry is installed
+if ! command -v poetry &> /dev/null; then
+    echo "❌ Poetry is not installed. Install it first:"
+    echo "   pip install poetry"
+    exit 1
+fi
+
+# Update pyproject.toml with project details
+echo "📝 Updating pyproject.toml..."
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS
+    sed -i '' "s/^name = .*/name = \"$PROJECT_NAME\"/" pyproject.toml
+    sed -i '' "s/^description = .*/description = \"$DESCRIPTION\"/" pyproject.toml
+    sed -i '' "s/^authors = .*/authors = [\"$AUTHOR\"]/" pyproject.toml
+else
+    # Linux
+    sed -i "s/^name = .*/name = \"$PROJECT_NAME\"/" pyproject.toml
+    sed -i "s/^description = .*/description = \"$DESCRIPTION\"/" pyproject.toml
+    sed -i "s/^authors = .*/authors = [\"$AUTHOR\"]/" pyproject.toml
+fi
+
+echo "   Project: $PROJECT_NAME"
+echo "   Description: $DESCRIPTION"
+echo "   Author: $AUTHOR"
+echo ""
+
+# Configure Poetry
+echo "📦 Configuring Poetry..."
+poetry config virtualenvs.in-project true
+
+# Install dependencies
+echo "📥 Installing dependencies from pyproject.toml..."
+echo "   Core: fastapi, uvicorn, deepagents, openai"
+echo "   DB: pymongo, certifi"
+echo "   Config: pydantic, pydantic-settings, python-dotenv"
+echo "   Dev: pytest, httpx, black, mypy, ruff"
+poetry install
+
+# Create .env from example if it doesn't exist
+if [ ! -f ".env" ]; then
+    if [ -f "env.example" ]; then
+        echo "📝 Creating .env file..."
+        cp env.example .env
+        echo ""
+        echo "⚠️  Important: Edit .env and add your OPENAI_API_KEY"
+    else
+        echo "📝 Creating .env file..."
+        cat > .env << EOF
+# OpenAI API Key (required)
+OPENAI_API_KEY=your_openai_api_key_here
+
+# MongoDB Connection (optional)
+MONGO_CONNECTION_STRING=mongodb://localhost:27017
+EOF
+    fi
+else
+    echo "✅ .env file already exists"
+fi
+
+echo ""
+echo "✅ Setup complete!"
+echo ""
+echo "Next steps:"
+echo "1. Edit .env and add your OPENAI_API_KEY"
+echo "2. Customize src/agent/system_prompt.txt"
+echo "3. Run: bin/run"
+echo ""
