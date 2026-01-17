@@ -2,7 +2,11 @@ from deepagents import create_deep_agent
 from pathlib import Path
 from typing import List, Callable, Any
 import json
+from langchain_openai import ChatOpenAI
+from src import Settings
 
+
+OPENAI_MODEL="gpt-4o-mini"
 SYSTEM_PROMPT_FILE = Path(__file__).parent / "system_prompt.txt"
 
 
@@ -77,9 +81,17 @@ def create_agent(user_prompt: str) -> dict[str, Any]:
     # Load configuration
     system_prompt = load_system_prompt()
     tools = get_tools()
+    
+    # Initialize OpenAI model
+    settings = Settings()
+    llm = ChatOpenAI(
+        model=OPENAI_MODEL,
+        api_key=settings.OPENAI_API_KEY,
+        temperature=0.1,
+    )
 
-    # Create deep agent - returns a LangGraph graph
-    agent = create_deep_agent(system_prompt=system_prompt, tools=tools)
+    # Create deep agent with OpenAI model - returns a LangGraph graph
+    agent = create_deep_agent(system_prompt=system_prompt, tools=tools, model=llm)
 
     # Prepare messages in the format deepagents expects
     messages = [{"role": "user", "content": user_prompt}]
@@ -98,6 +110,23 @@ def create_agent(user_prompt: str) -> dict[str, Any]:
             last_message.content if hasattr(last_message, "content") else str(last_message)
         )
 
+    # Extract tool calls from all messages
+    tools_called = []
+    for msg in result_messages:
+        # Check if message has tool_calls attribute (AIMessage with tool calls)
+        if hasattr(msg, "tool_calls") and msg.tool_calls:
+            for tool_call in msg.tool_calls:
+                tools_called.append(
+                    {
+                        "name": tool_call.get("name", "unknown"),
+                        "args": tool_call.get("args", {}),
+                    }
+                )
+        # Check if message is a ToolMessage (tool execution result)
+        elif hasattr(msg, "name") and msg.__class__.__name__ == "ToolMessage":
+            # Already captured from tool_calls above
+            pass
+
     # Parse content as JSON dict, fallback to raw string in dict if parsing fails
     content_dict: dict[str, Any]
     try:
@@ -111,5 +140,8 @@ def create_agent(user_prompt: str) -> dict[str, Any]:
         # If not valid JSON, wrap in dict
         content_dict = {"response": content_str}
 
-    # Build structured JSON response
-    return content_dict
+    # Build structured JSON response with result and metadata
+    return {
+        "result": content_dict,
+        "metadata": {"tools_called": tools_called, "message_count": len(result_messages)},
+    }

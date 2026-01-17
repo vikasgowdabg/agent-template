@@ -21,6 +21,7 @@ certifi = "^2023.11.17"
 openai = "^1.0.0"
 redis = {extras = ["asyncio"], version = "^5.0.0"}
 fastapi-cache2 = "^0.2.1"
+langchain-openai = "^1.1.7"
 
 [tool.poetry.group.dev.dependencies]
 # Dev dependencies - automatically installed by bin/setup
