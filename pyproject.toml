@@ -12,7 +12,7 @@ python = "^3.11"  # deepagents requires Python >=3.11
 fastapi = "^0.109.0"
 uvicorn = {extras = ["standard"], version = "^0.27.0"}
 deepagents = "^0.3.6"  # Latest version with create_deep_agent
-langgraph = "^0.2.0"  # Required by deepagents
+langgraph = "^1.0.2"  # Required by deepagents
 python-dotenv = "^1.0.0"
 pymongo = "^4.6.0"
 pydantic = "^2.5.0"
@@ -28,7 +28,7 @@ pytest = "^7.4.0"
 pytest-asyncio = "^0.21.0"
 pytest-cov = "^4.1.0"
 pytest-mock = "^3.12.0"
-httpx = "^0.25.0"
+httpx = "^0.28.1"
 black = "^23.12.0"
 mypy = "^1.8.0"
 ruff = "^0.1.0"
