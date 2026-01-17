@@ -21,6 +21,7 @@ class AgentResponse(BaseModel):
 
 class ClearCacheResponse(BaseModel):
     """Response for cache clear operation."""
+
     success: bool
     message: str
 
@@ -30,11 +31,11 @@ class ClearCacheResponse(BaseModel):
 async def lifespan(app: FastAPI):
     """
     Lifecycle manager for FastAPI application.
-    
+
     Initializes MongoDB connection if MONGO_CONNECTION_STRING is provided.
     """
     settings = Settings()
-    
+
     # Initialize MongoDB if connection string is provided
     if settings.MONGO_CONNECTION_STRING:
         try:
@@ -48,9 +49,9 @@ async def lifespan(app: FastAPI):
             logger.warning("Continuing without MongoDB connection.")
     else:
         logger.info("No MONGO_CONNECTION_STRING provided, skipping MongoDB initialization.")
-    
+
     yield
-    
+
     # Shutdown
     if settings.MONGO_CONNECTION_STRING:
         await Database.close_client()
@@ -58,10 +59,7 @@ async def lifespan(app: FastAPI):
 
 
 # App
-app = FastAPI(
-    title="Agent API",
-    lifespan=lifespan
-)
+app = FastAPI(title="Agent API", lifespan=lifespan)
 
 
 # Endpoints
@@ -75,10 +73,10 @@ async def health_check():
 async def invoke_agent(req: AgentRequest):
     """
     Invokes the deep agent and returns structured response.
-    
+
     Args:
         req: AgentRequest with user_prompt
-        
+
     Returns:
         AgentResponse with result and metadata
     """
@@ -90,19 +88,13 @@ async def invoke_agent(req: AgentRequest):
 async def clear_cache():
     """
     Clear all Redis cache.
-    
+
     Examples:
     - DELETE /cache -> clears all cache
     """
     try:
         await clear_all_cache()
-        return ClearCacheResponse(
-            success=True,
-            message="All cache cleared successfully"
-        )
+        return ClearCacheResponse(success=True, message="All cache cleared successfully")
     except Exception as e:
         logger.error(f"Error clearing cache: {e}")
-        return ClearCacheResponse(
-            success=False,
-            message=f"Failed to clear cache: {str(e)}"
-        )
+        return ClearCacheResponse(success=False, message=f"Failed to clear cache: {str(e)}")

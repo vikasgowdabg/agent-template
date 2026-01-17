@@ -49,8 +49,12 @@ echo "📥 Installing dependencies from pyproject.toml..."
 echo "   Core: fastapi, uvicorn, deepagents, openai"
 echo "   DB: pymongo, certifi"
 echo "   Config: pydantic, pydantic-settings, python-dotenv"
-echo "   Dev: pytest, httpx, black, mypy, ruff"
+echo "   Dev: pytest, httpx, black, mypy, ruff, pre-commit"
 poetry install
+
+# Install pre-commit hooks
+echo "🪝 Installing pre-commit hooks..."
+poetry run pre-commit install
 
 # Create .env from example if it doesn't exist
 if [ ! -f ".env" ]; then
@@ -80,4 +84,10 @@ echo "Next steps:"
 echo "1. Edit .env and add your OPENAI_API_KEY"
 echo "2. Customize src/agent/system_prompt.txt"
 echo "3. Run: bin/run"
+echo ""
+echo "Pre-commit hooks installed. Your commits will be automatically checked for:"
+echo "  - Code formatting (black)"
+echo "  - Linting (ruff)"
+echo "  - Type checking (mypy)"
+echo "  - Common issues (trailing whitespace, secrets, etc.)"
 echo ""

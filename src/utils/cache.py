@@ -32,9 +32,7 @@ class Cache:
         redis_password = os.getenv("REDIS_PASSWORD", "")
         redis_db = os.getenv("REDIS_DB", 0)
         if redis_password:
-            redis_url = (
-                f"redis://:{redis_password}@{redis_host}:{redis_port}/{redis_db}"
-            )
+            redis_url = f"redis://:{redis_password}@{redis_host}:{redis_port}/{redis_db}"
         else:
             redis_url = f"redis://{redis_host}:{redis_port}/{redis_db}"
         try:
@@ -60,9 +58,7 @@ class Cache:
         except (RedisError, TimeoutError, ConnectionError) as e:
             cls._cache_client_unavailable = True
             cls._cache_client = None
-            logger.error(
-                f"Error initializing Redis client for Redis Host {redis_host}: {e}"
-            )
+            logger.error(f"Error initializing Redis client for Redis Host {redis_host}: {e}")
 
     @classmethod
     async def get_redis(cls) -> Optional[Redis]:
@@ -80,9 +76,7 @@ class Cache:
         if cache_client:
             return CustomRedisBackend(cache_client)
         else:
-            logger.warning(
-                "Redis client is not available. Cannot return cache backend."
-            )
+            logger.warning("Redis client is not available. Cannot return cache backend.")
             return None
 
 
@@ -103,16 +97,16 @@ def generate_cache_key(func, args, kwargs, skip_args=None, skip_kwargs=None, pre
         skip_args: Positional argument indexes to skip
         skip_kwargs: Keyword argument keys to skip
         prefix: Cache key prefix (default: "cache")
-        
+
     Returns:
         Cache key string
     """
     skip_args = skip_args or []
     skip_kwargs = skip_kwargs or []
-    
+
     filtered_args = [str(arg) for i, arg in enumerate(args) if i not in skip_args]
     filtered_kwargs = {k: v for k, v in kwargs.items() if k not in skip_kwargs}
-    
+
     cache_key = (
         f"{prefix}:{func.__name__}:"
         f"{':'.join(filtered_args)}:"
@@ -145,14 +139,12 @@ def deserialize_datetime(obj):
     return obj
 
 
-async def set_cache(key: str, value: Any, ttl: int = None):
+async def set_cache(key: str, value: Any, ttl: int | None = None):
     if not ttl:
         logger.error(f"TTL not provided for key {key}.")
     cache_client = await Cache.get_redis()
     if not cache_client:
-        logger.warning(
-            f"Redis client is not available, cannot set cache for key {key}."
-        )
+        logger.warning(f"Redis client is not available, cannot set cache for key {key}.")
         return
     try:
         serialized_value = json.dumps(value, default=serialize_datetime)
@@ -166,9 +158,7 @@ async def set_cache(key: str, value: Any, ttl: int = None):
 async def get_cache(key: str) -> Any:
     cache_client = await Cache.get_redis()
     if not cache_client:
-        logger.warning(
-            f"Redis client is not available, cannot get cache for key {key}."
-        )
+        logger.warning(f"Redis client is not available, cannot get cache for key {key}.")
         return None
 
     try:
@@ -177,9 +167,7 @@ async def get_cache(key: str) -> Any:
             return json.loads(serialized_value, object_hook=deserialize_datetime)
         return None
     except (TimeoutError, ConnectionError) as e:
-        logger.warning(
-            f"Redis connection timeout or error getting cache for key {key}: {e}"
-        )
+        logger.warning(f"Redis connection timeout or error getting cache for key {key}: {e}")
         return None
     except RedisError as e:
         logger.warning(f"Redis error getting cache for key {key}: {e}")
@@ -288,9 +276,7 @@ async def clear_pattern(cache_client: Redis, pattern: str, prefix: str = "cache"
                 if cursor == 0:
                     break
     except (TimeoutError, ConnectionError) as e:
-        logger.warning(
-            f"Redis timeout or connection error scanning and deleting keys: {e}"
-        )
+        logger.warning(f"Redis timeout or connection error scanning and deleting keys: {e}")
     except RedisError as e:
         logger.warning(f"Redis error scanning and deleting keys: {e}")
         raise

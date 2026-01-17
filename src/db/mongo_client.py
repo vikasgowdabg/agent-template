@@ -16,9 +16,10 @@ F = TypeVar("F", bound=Callable[..., Any])
 def handle_db_errors(default_return: T) -> Callable[[F], F]:
     """
     Decorator to handle database errors consistently.
-    
+
     Returns default_return if any exception occurs.
     """
+
     def decorator(func: F) -> F:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -27,7 +28,9 @@ def handle_db_errors(default_return: T) -> Callable[[F], F]:
             except Exception as e:
                 logger.error(f"Database error in {func.__name__}: {e}")
                 return default_return
+
         return cast(F, wrapper)
+
     return decorator
 
 
@@ -39,6 +42,7 @@ def encode_mongo_password(password: str) -> str:
 def should_enable_tls(mongo_uri: str) -> bool:
     """Determine if TLS should be enabled based on URI or environment."""
     import os
+
     if os.getenv("APP_ENV", "").lower() == "local":
         return False
     if ".svc.cluster.local" in mongo_uri:
@@ -53,7 +57,7 @@ def should_enable_tls(mongo_uri: str) -> bool:
 def create_mongo_client(mongo_uri: str, timeout: int = 60000) -> MongoClient:
     """Creates a MongoDB client with TLS and sensible defaults."""
     enable_tls = should_enable_tls(mongo_uri)
-    
+
     client_args: dict[str, Any] = {
         "server_api": ServerApi("1"),
         "serverSelectionTimeoutMS": timeout,
@@ -76,16 +80,16 @@ def create_mongo_client(mongo_uri: str, timeout: int = 60000) -> MongoClient:
 class Database:
     """
     Singleton MongoDB connection handler.
-    
+
     Usage:
         # Initialize once at startup
         Database.init_client(mongo_uri)
-        
+
         # Get client anywhere
         client = Database.client()
         db = Database.get_database("my_db")
         collection = Database.get_collection("my_collection", "my_db")
-        
+
         # Close at shutdown
         Database.close_client()
     """
