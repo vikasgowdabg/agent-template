@@ -3,11 +3,29 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import asyncio
 
-from src.agent.agent_factory import agent_instance
+from src.agent.agent_factory import create_agent
 from src import Settings, logger
 from src.db.mongo_client import Database
+from src.utils.cache import clear_all_cache
 
 
+# Request/Response Models
+class AgentRequest(BaseModel):
+    user_prompt: str
+
+
+class AgentResponse(BaseModel):
+    result: dict
+    metadata: dict
+
+
+class ClearCacheResponse(BaseModel):
+    """Response for cache clear operation."""
+    success: bool
+    message: str
+
+
+# Lifecycle
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -39,39 +57,52 @@ async def lifespan(app: FastAPI):
         logger.info("MongoDB connection closed.")
 
 
+# App
 app = FastAPI(
     title="Agent API",
     lifespan=lifespan
 )
 
 
-# Request model
-class AgentRequest(BaseModel):
-    query: str
-
-
-# Response model
-class AgentResponse(BaseModel):
-    answer: str
+# Endpoints
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "ok"}
 
 
 @app.post("/invoke", response_model=AgentResponse)
 async def invoke_agent(req: AgentRequest):
     """
-    Invokes the deepagents agent asynchronously.
+    Invokes the deep agent and returns structured response.
     
     Args:
-        req: AgentRequest with query field
+        req: AgentRequest with user_prompt
         
     Returns:
-        AgentResponse with answer field
+        AgentResponse with result and metadata
     """
-    # Run the synchronous agent in a thread to avoid blocking
-    result = await asyncio.to_thread(agent_instance.run, req.query)
-    return AgentResponse(answer=result)
+    response = await asyncio.to_thread(create_agent, req.user_prompt)
+    return response
 
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint."""
-    return {"status": "ok"}
+@app.delete("/cache", response_model=ClearCacheResponse)
+async def clear_cache():
+    """
+    Clear all Redis cache.
+    
+    Examples:
+    - DELETE /cache -> clears all cache
+    """
+    try:
+        await clear_all_cache()
+        return ClearCacheResponse(
+            success=True,
+            message="All cache cleared successfully"
+        )
+    except Exception as e:
+        logger.error(f"Error clearing cache: {e}")
+        return ClearCacheResponse(
+            success=False,
+            message=f"Failed to clear cache: {str(e)}"
+        )

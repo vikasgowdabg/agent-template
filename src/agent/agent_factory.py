@@ -1,35 +1,113 @@
-from deepagents import Agent
+from deepagents import create_deep_agent
 from pathlib import Path
+from typing import List, Callable
+import json
 
-# Path to system prompt file
 SYSTEM_PROMPT_FILE = Path(__file__).parent / "system_prompt.txt"
 
 
-def create_agent() -> Agent:
+def get_tools() -> List[Callable]:
     """
-    Creates a deepagents Agent instance.
+    Returns the list of tools available to the agent.
     
-    The agent is configured with:
-    - system_prompt: loaded from system_prompt.txt
-    - tools: empty list (add your custom tools here)
+    Add your custom tools here by importing them from src.tools.
+    Tools are automatically included along with deepagents built-in tools:
+    - write_todos: Planning and task decomposition
+    - File system: ls, read_file, write_file, edit_file, glob, grep
+    - task: Subagent spawning
     
     Returns:
-        Configured Agent instance
+        List of callable tool functions
     """
-    # Load system prompt from file
-    system_prompt = SYSTEM_PROMPT_FILE.read_text(encoding="utf-8")
+    # Import your custom tools here
+    # from src.tools.example_tool import get_current_time
     
-    # Define tools (empty for now - add your custom tools here)
-    tools = []
+    # Add your custom tools to this list
+    tools = [
+        # get_current_time,  # Uncomment when you have custom tools
+    ]
     
-    # Create and return agent
-    agent = Agent(
+    return tools
+
+
+def load_system_prompt() -> str:
+    """
+    Loads the base system prompt from file.
+    
+    Returns:
+        System prompt text
+        
+    Raises:
+        FileNotFoundError: If system_prompt.txt doesn't exist
+        ValueError: If system prompt is empty
+    """
+    if not SYSTEM_PROMPT_FILE.exists():
+        raise FileNotFoundError(f"System prompt file not found: {SYSTEM_PROMPT_FILE}")
+    
+    prompt = SYSTEM_PROMPT_FILE.read_text(encoding="utf-8").strip()
+    
+    if not prompt:
+        raise ValueError("System prompt cannot be empty")
+    
+    return prompt
+
+
+def create_agent(user_prompt: str) -> dict:
+    """
+    Creates and invokes a deep agent, returning structured response.
+    
+    Deep agents are LangGraph graphs with built-in capabilities for:
+    - Planning and task decomposition (write_todos tool)
+    - File system access (ls, read_file, write_file, etc.)
+    - Subagent spawning (task tool)
+    
+    Custom tools are defined in get_tools() function in this module.
+    System prompt is loaded from system_prompt.txt.
+    
+    Args:
+        user_prompt: User's prompt/query
+    
+    Returns:
+        Dict with 'result' and 'metadata' keys containing structured response
+        
+    Raises:
+        FileNotFoundError: If system_prompt.txt doesn't exist
+        ValueError: If system prompt is empty
+    """
+    # Load configuration
+    system_prompt = load_system_prompt()
+    tools = get_tools()
+    
+    # Create deep agent - returns a LangGraph graph
+    agent = create_deep_agent(
         system_prompt=system_prompt,
         tools=tools
     )
     
-    return agent
-
-
-# Singleton agent instance - created once at import
-agent_instance = create_agent()
+    # Prepare messages in the format deepagents expects
+    messages = [{"role": "user", "content": user_prompt}]
+    
+    # Invoke agent
+    agent_result = agent.invoke({"messages": messages})
+    
+    # Extract messages and build response
+    result_messages = agent_result.get("messages", [])
+    last_message = result_messages[-1] if result_messages else None
+    
+    # Extract content from last message
+    content_str = ""
+    if last_message:
+        content_str = last_message.content if hasattr(last_message, 'content') else str(last_message)
+    
+    # Parse content as JSON dict, fallback to raw string in dict if parsing fails
+    try:
+        content_dict = json.loads(content_str)
+        # Ensure it's a dict
+        if not isinstance(content_dict, dict):
+            content_dict = {"response": content_dict}
+    except (json.JSONDecodeError, TypeError):
+        # If not valid JSON, wrap in dict
+        content_dict = {"response": content_str}
+    
+    # Build structured JSON response
+    return content_dict
