@@ -1,0 +1,49 @@
+[tool.poetry]
+name = "agent-template"
+version = "0.1.0"
+description = "A template for creating FastAPI-based agents"
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+# Core dependencies - automatically installed by bin/setup
+python = "^3.10"
+fastapi = "^0.109.0"
+uvicorn = {extras = ["standard"], version = "^0.27.0"}
+deepagents = "^0.1.0"
+python-dotenv = "^1.0.0"
+pymongo = "^4.6.0"
+pydantic = "^2.5.0"
+pydantic-settings = "^2.1.0"
+certifi = "^2023.11.17"
+openai = "^1.0.0"
+
+[tool.poetry.group.dev.dependencies]
+# Dev dependencies - automatically installed by bin/setup
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.0"
+pytest-cov = "^4.1.0"
+pytest-mock = "^3.12.0"
+httpx = "^0.25.0"
+black = "^23.12.0"
+mypy = "^1.8.0"
+ruff = "^0.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
