@@ -9,22 +9,26 @@ cd "$(dirname "$0")/.."
 echo "🤖 Setting up your agent project..."
 echo ""
 
-# Get project name - MANDATORY (lowercase, hyphens, underscores, numbers only)
+# Get project name - MANDATORY (must start with agent-)
 if [ -z "$1" ]; then
     while true; do
-        read -p "Project name (lowercase-with-hyphens): " PROJECT_NAME
+        read -p "Project name (agent-*): " PROJECT_NAME
         if [ -z "$PROJECT_NAME" ]; then
             echo "❌ Project name is required"
-        elif ! [[ "$PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
-            echo "❌ Invalid format. Use lowercase letters, numbers, hyphens, and underscores only (e.g., my-agent, my_agent_1)"
+        elif ! [[ "$PROJECT_NAME" =~ ^agent-[a-z0-9][a-z0-9_-]*$ ]]; then
+            echo "❌ Project name must follow pattern: agent-<name>"
+            echo "   Examples: agent-charlie, agent-orchestrator, agent-tool-1"
+            echo "   Use lowercase letters, numbers, hyphens, and underscores after 'agent-'"
         else
             break
         fi
     done
 else
     PROJECT_NAME=$1
-    if ! [[ "$PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
-        echo "❌ Invalid project name format. Use lowercase letters, numbers, hyphens, and underscores only"
+    if ! [[ "$PROJECT_NAME" =~ ^agent-[a-z0-9][a-z0-9_-]*$ ]]; then
+        echo "❌ Project name must follow pattern: agent-<name>"
+        echo "   Examples: agent-charlie, agent-orchestrator, agent-tool-1"
+        echo "   Use lowercase letters, numbers, hyphens, and underscores after 'agent-'"
         exit 1
     fi
 fi
@@ -56,7 +60,7 @@ if [ -z "$3" ]; then
         read -p "Author (Name <email@example.com>) [$DEFAULT_AUTHOR]: " INPUT_AUTHOR
         AUTHOR=${INPUT_AUTHOR:-$DEFAULT_AUTHOR}
         # Validate format: Name <email@domain.com>
-        if [[ "$AUTHOR" =~ ^[^<]+\ \<[^@]+@[^>]+\>$ ]]; then
+        if [[ "$AUTHOR" =~ ^.+\ \<.+@.+\>$ ]]; then
             break
         else
             echo "❌ Invalid format. Use: Name <email@example.com>"
@@ -69,7 +73,7 @@ if [ -z "$3" ]; then
     done
 else
     AUTHOR=$3
-    if ! [[ "$AUTHOR" =~ ^[^<]+\ \<[^@]+@[^>]+\>$ ]]; then
+    if ! [[ "$AUTHOR" =~ ^.+\ \<.+@.+\>$ ]]; then
         echo "❌ Invalid author format. Use: Name <email@example.com>"
         exit 1
     fi
