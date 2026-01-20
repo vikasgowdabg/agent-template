@@ -6,12 +6,42 @@ set -e
 
 cd "$(dirname "$0")/.."
 
-# Get parameters or use defaults
-PROJECT_NAME=${1:-"my-agent"}
-DESCRIPTION=${2:-"AI agent built with deepagents"}
-AUTHOR=${3:-"Your Name <you@example.com>"}
-
 echo "🤖 Setting up your agent project..."
+echo ""
+
+# Get project name from repo or prompt
+if [ -z "$1" ]; then
+    # Try to get repo name from git remote
+    REPO_NAME=$(basename -s .git "$(git config --get remote.origin.url 2>/dev/null)" 2>/dev/null || basename "$(pwd)")
+    read -p "Project name [$REPO_NAME]: " INPUT_NAME
+    PROJECT_NAME=${INPUT_NAME:-$REPO_NAME}
+else
+    PROJECT_NAME=$1
+fi
+
+# Get description
+if [ -z "$2" ]; then
+    read -p "Description [AI agent built with deepagents]: " INPUT_DESC
+    DESCRIPTION=${INPUT_DESC:-"AI agent built with deepagents"}
+else
+    DESCRIPTION=$2
+fi
+
+# Get author
+if [ -z "$3" ]; then
+    GIT_USER=$(git config user.name 2>/dev/null || echo "")
+    GIT_EMAIL=$(git config user.email 2>/dev/null || echo "")
+    if [ -n "$GIT_USER" ] && [ -n "$GIT_EMAIL" ]; then
+        DEFAULT_AUTHOR="$GIT_USER <$GIT_EMAIL>"
+    else
+        DEFAULT_AUTHOR="Your Name <you@example.com>"
+    fi
+    read -p "Author [$DEFAULT_AUTHOR]: " INPUT_AUTHOR
+    AUTHOR=${INPUT_AUTHOR:-$DEFAULT_AUTHOR}
+else
+    AUTHOR=$3
+fi
+
 echo ""
 
 # Check if poetry is installed
@@ -23,16 +53,26 @@ fi
 
 # Update pyproject.toml with project details
 echo "📝 Updating pyproject.toml..."
+
+# Escape special chars for sed (/, &, \, ", and newlines)
+escape_sed() {
+    printf '%s\n' "$1" | sed -e 's/[\/&"]/\\&/g'
+}
+
+ESCAPED_NAME=$(escape_sed "$PROJECT_NAME")
+ESCAPED_DESC=$(escape_sed "$DESCRIPTION")
+ESCAPED_AUTHOR=$(escape_sed "$AUTHOR")
+
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS
-    sed -i '' "s/^name = .*/name = \"$PROJECT_NAME\"/" pyproject.toml
-    sed -i '' "s/^description = .*/description = \"$DESCRIPTION\"/" pyproject.toml
-    sed -i '' "s/^authors = .*/authors = [\"$AUTHOR\"]/" pyproject.toml
+    sed -i '' "s/^name = .*/name = \"$ESCAPED_NAME\"/" pyproject.toml
+    sed -i '' "s/^description = .*/description = \"$ESCAPED_DESC\"/" pyproject.toml
+    sed -i '' "s/^authors = .*/authors = [\"$ESCAPED_AUTHOR\"]/" pyproject.toml
 else
     # Linux
-    sed -i "s/^name = .*/name = \"$PROJECT_NAME\"/" pyproject.toml
-    sed -i "s/^description = .*/description = \"$DESCRIPTION\"/" pyproject.toml
-    sed -i "s/^authors = .*/authors = [\"$AUTHOR\"]/" pyproject.toml
+    sed -i "s/^name = .*/name = \"$ESCAPED_NAME\"/" pyproject.toml
+    sed -i "s/^description = .*/description = \"$ESCAPED_DESC\"/" pyproject.toml
+    sed -i "s/^authors = .*/authors = [\"$ESCAPED_AUTHOR\"]/" pyproject.toml
 fi
 
 echo "   Project: $PROJECT_NAME"
