@@ -120,21 +120,17 @@ Provide accurate weather information.
 
 ### 4. Add Tools to Agent Factory
 
-Edit `src/agent/agent_factory.py`:
+Edit `src/agent/agent_factory.py` - register your tools in the `get_tools()` function:
 ```python
-from deepagents import Agent
-from pathlib import Path
-from src.tools.weather import get_weather
+def get_tools() -> List[Callable]:
+    """Add your tools to this function."""
+    from src.tools.weather import get_weather
 
-SYSTEM_PROMPT_FILE = Path(__file__).parent / "system_prompt.txt"
+    tools: List[Callable] = [
+        get_weather,  # <-- Add your tools here
+    ]
 
-def create_agent() -> Agent:
-    system_prompt = SYSTEM_PROMPT_FILE.read_text(encoding="utf-8")
-    tools = [get_weather]  # Add your tools here
-    agent = Agent(system_prompt=system_prompt, tools=tools)
-    return agent
-
-agent_instance = create_agent()
+    return tools
 ```
 
 ### 5. Add Configuration (optional)
@@ -169,6 +165,20 @@ collection.insert_one({"name": "John"})
 ```
 
 If not using MongoDB, delete `src/db/` folder.
+
+### 7. Add Dependencies (if needed)
+
+```bash
+# Install a new dependency
+poetry add <DEPENDENCY>              # e.g., poetry add requests
+poetry add <DEPENDENCY>@<VERSION>    # e.g., poetry add requests@2.31.0
+
+# Install a dev dependency
+poetry add --dev <DEPENDENCY>
+
+# Remove a dependency
+poetry remove <DEPENDENCY>
+```
 
 ## Development Workflow
 
