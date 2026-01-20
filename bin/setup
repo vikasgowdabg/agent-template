@@ -9,25 +9,41 @@ cd "$(dirname "$0")/.."
 echo "🤖 Setting up your agent project..."
 echo ""
 
-# Get project name from repo or prompt
+# Get project name - MANDATORY (lowercase, hyphens, underscores, numbers only)
 if [ -z "$1" ]; then
-    # Try to get repo name from git remote
-    REPO_NAME=$(basename -s .git "$(git config --get remote.origin.url 2>/dev/null)" 2>/dev/null || basename "$(pwd)")
-    read -p "Project name [$REPO_NAME]: " INPUT_NAME
-    PROJECT_NAME=${INPUT_NAME:-$REPO_NAME}
+    while true; do
+        read -p "Project name (lowercase-with-hyphens): " PROJECT_NAME
+        if [ -z "$PROJECT_NAME" ]; then
+            echo "❌ Project name is required"
+        elif ! [[ "$PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
+            echo "❌ Invalid format. Use lowercase letters, numbers, hyphens, and underscores only (e.g., my-agent, my_agent_1)"
+        else
+            break
+        fi
+    done
 else
     PROJECT_NAME=$1
+    if ! [[ "$PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
+        echo "❌ Invalid project name format. Use lowercase letters, numbers, hyphens, and underscores only"
+        exit 1
+    fi
 fi
 
-# Get description
+# Get description - MANDATORY
 if [ -z "$2" ]; then
-    read -p "Description [AI agent built with deepagents]: " INPUT_DESC
-    DESCRIPTION=${INPUT_DESC:-"AI agent built with deepagents"}
+    while true; do
+        read -p "Description: " DESCRIPTION
+        if [ -z "$DESCRIPTION" ]; then
+            echo "❌ Description is required"
+        else
+            break
+        fi
+    done
 else
     DESCRIPTION=$2
 fi
 
-# Get author
+# Get author - OPTIONAL (must be in "Name <email@example.com>" format if provided)
 if [ -z "$3" ]; then
     GIT_USER=$(git config user.name 2>/dev/null || echo "")
     GIT_EMAIL=$(git config user.email 2>/dev/null || echo "")
@@ -36,10 +52,27 @@ if [ -z "$3" ]; then
     else
         DEFAULT_AUTHOR="Your Name <you@example.com>"
     fi
-    read -p "Author [$DEFAULT_AUTHOR]: " INPUT_AUTHOR
-    AUTHOR=${INPUT_AUTHOR:-$DEFAULT_AUTHOR}
+    while true; do
+        read -p "Author (Name <email@example.com>) [$DEFAULT_AUTHOR]: " INPUT_AUTHOR
+        AUTHOR=${INPUT_AUTHOR:-$DEFAULT_AUTHOR}
+        # Validate format: Name <email@domain.com>
+        if [[ "$AUTHOR" =~ ^[^<]+\ \<[^@]+@[^>]+\>$ ]]; then
+            break
+        else
+            echo "❌ Invalid format. Use: Name <email@example.com>"
+            if [ -z "$INPUT_AUTHOR" ]; then
+                # If they just hit enter, use default anyway
+                AUTHOR=$DEFAULT_AUTHOR
+                break
+            fi
+        fi
+    done
 else
     AUTHOR=$3
+    if ! [[ "$AUTHOR" =~ ^[^<]+\ \<[^@]+@[^>]+\>$ ]]; then
+        echo "❌ Invalid author format. Use: Name <email@example.com>"
+        exit 1
+    fi
 fi
 
 echo ""
