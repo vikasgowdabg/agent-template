@@ -5,6 +5,7 @@ from urllib.parse import quote_plus
 
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
 from src import logger
 
@@ -78,53 +79,76 @@ def create_mongo_client(mongo_uri: str, timeout: int = 60000) -> MongoClient:
 
 class Database:
     """
-    Singleton MongoDB connection handler.
+    Singleton MongoDB connection handler with sync and async support.
 
     Usage:
         # Initialize once at startup
         Database.init_client(mongo_uri)
 
-        # Get client anywhere
-        client = Database.client()
+        # Sync access
         db = Database.get_database("my_db")
-        collection = Database.get_collection("my_collection", "my_db")
+
+        # Async access (for session management, etc.)
+        db = Database.get_async_database("my_db")
 
         # Close at shutdown
         Database.close_client()
     """
 
     _client: Optional[MongoClient] = None
+    _async_client: Optional[AsyncIOMotorClient] = None
+    _mongo_uri: Optional[str] = None
 
     @classmethod
     def init_client(cls, mongo_uri: str) -> None:
-        """Initialize the MongoDB client if not already initialized."""
+        """Initialize both sync and async MongoDB clients."""
+        cls._mongo_uri = mongo_uri
         if cls._client is None:
             cls._client = create_mongo_client(mongo_uri)
-            logger.info("MongoDB client initialized")
+        if cls._async_client is None:
+            cls._async_client = AsyncIOMotorClient(mongo_uri)
+        logger.info("MongoDB clients initialized")
 
     @classmethod
     def client(cls) -> MongoClient:
-        """Get the MongoDB client."""
+        """Get the sync MongoDB client."""
         if cls._client is None:
             raise RuntimeError("MongoDB client not initialized. Call init_client() first.")
         return cls._client
 
     @classmethod
+    def async_client(cls) -> AsyncIOMotorClient:
+        """Get the async MongoDB client."""
+        if cls._async_client is None:
+            raise RuntimeError("MongoDB client not initialized. Call init_client() first.")
+        return cls._async_client
+
+    @classmethod
     def get_database(cls, db_name: str):
-        """Get a MongoDB database."""
+        """Get a sync MongoDB database."""
         if cls._client is None:
             raise RuntimeError("MongoDB client not initialized. Call init_client() first.")
         return cls._client[db_name]
 
     @classmethod
+    def get_async_database(cls, db_name: str) -> AsyncIOMotorDatabase:
+        """Get an async MongoDB database."""
+        if cls._async_client is None:
+            raise RuntimeError("MongoDB client not initialized. Call init_client() first.")
+        return cls._async_client[db_name]
+
+    @classmethod
     def get_collection(cls, collection_name: str, db_name: str):
-        """Get a MongoDB collection."""
+        """Get a sync MongoDB collection."""
         return cls.get_database(db_name)[collection_name]
 
     @classmethod
     async def close_client(cls):
-        """Close the MongoDB client."""
+        """Close both MongoDB clients."""
         if cls._client:
             cls._client.close()
             cls._client = None
-            logger.info("MongoDB client closed")
+        if cls._async_client:
+            cls._async_client.close()
+            cls._async_client = None
+        logger.info("MongoDB clients closed")

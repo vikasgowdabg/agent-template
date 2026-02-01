@@ -15,6 +15,7 @@ deepagents = "^0.3.6"  # Latest version with create_deep_agent
 langgraph = "^1.0.2"  # Required by deepagents
 python-dotenv = "^1.0.0"
 pymongo = "^4.6.0"
+motor = "^3.3.0"
 pydantic = "^2.5.0"
 pydantic-settings = "^2.1.0"
 certifi = "^2023.11.17"

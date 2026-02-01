@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
+from typing import Optional
 from fastapi import FastAPI
 from pydantic import BaseModel
-import asyncio
 
 from src.agent.agent_factory import create_agent
 from src import Settings, logger
@@ -12,6 +12,7 @@ from src.utils.cache import clear_all_cache
 # Request/Response Models
 class AgentRequest(BaseModel):
     user_prompt: str
+    session_id: Optional[str] = None
 
 
 class AgentResponse(BaseModel):
@@ -75,12 +76,12 @@ async def invoke_agent(req: AgentRequest):
     Invokes the deep agent and returns structured response.
 
     Args:
-        req: AgentRequest with user_prompt
+        req: AgentRequest with user_prompt and optional session_id
 
     Returns:
         AgentResponse with result and metadata
     """
-    response = await asyncio.to_thread(create_agent, req.user_prompt)
+    response = await create_agent(req.user_prompt, req.session_id)
     return response
 
 

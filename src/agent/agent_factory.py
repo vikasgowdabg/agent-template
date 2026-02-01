@@ -1,13 +1,19 @@
 from deepagents import create_deep_agent
 from pathlib import Path
-from typing import List, Callable, Any
+from typing import List, Callable, Any, Dict, Optional
 import json
 from langchain_openai import ChatOpenAI
+
 from src import Settings
+from src.utils.session import get_or_create_session, save_session
 
-
-OPENAI_MODEL="gpt-4o-mini"
+OPENAI_MODEL = "gpt-4o-mini"
 SYSTEM_PROMPT_FILE = Path(__file__).parent / "system_prompt.txt"
+
+
+# =============================================================================
+# Agent Configuration
+# =============================================================================
 
 
 def get_tools() -> List[Callable]:
@@ -56,32 +62,37 @@ def load_system_prompt() -> str:
     return prompt
 
 
-def create_agent(user_prompt: str) -> dict[str, Any]:
+# =============================================================================
+# Main Agent Function
+# =============================================================================
+
+
+async def create_agent(
+    user_prompt: str,
+    session_id: Optional[str] = None,
+) -> Dict[str, Any]:
     """
-    Creates and invokes a deep agent, returning structured response.
-
-    Deep agents are LangGraph graphs with built-in capabilities for:
-    - Planning and task decomposition (write_todos tool)
-    - File system access (ls, read_file, write_file, etc.)
-    - Subagent spawning (task tool)
-
-    Custom tools are defined in get_tools() function in this module.
-    System prompt is loaded from system_prompt.txt.
+    Creates and invokes a deep agent with session state management.
 
     Args:
         user_prompt: User's prompt/query
+        session_id: Optional session ID for conversation continuity.
 
     Returns:
-        Dict with 'result' and 'metadata' keys containing structured response
+        Dict with 'result' and 'metadata' keys containing structured response.
 
-    Raises:
-        FileNotFoundError: If system_prompt.txt doesn't exist
-        ValueError: If system prompt is empty
+    Example:
+        response1 = await create_agent("What is 2+2?")
+        sid = response1["metadata"]["session_id"]
+        response2 = await create_agent("What about 3+3?", session_id=sid)
     """
+    # Get or create session from MongoDB
+    state = await get_or_create_session(session_id)
+
     # Load configuration
     system_prompt = load_system_prompt()
     tools = get_tools()
-    
+
     # Initialize OpenAI model
     settings = Settings()
     llm = ChatOpenAI(
@@ -93,11 +104,11 @@ def create_agent(user_prompt: str) -> dict[str, Any]:
     # Create deep agent with OpenAI model - returns a LangGraph graph
     agent = create_deep_agent(system_prompt=system_prompt, tools=tools, model=llm)
 
-    # Prepare messages in the format deepagents expects
-    messages = [{"role": "user", "content": user_prompt}]
+    # Add current user message to session history
+    state.messages.append({"role": "user", "content": user_prompt})
 
-    # Invoke agent
-    agent_result = agent.invoke({"messages": messages})
+    # Invoke agent with FULL conversation history
+    agent_result = agent.invoke({"messages": state.messages})
 
     # Extract messages and build response
     result_messages = agent_result.get("messages", [])
@@ -109,6 +120,11 @@ def create_agent(user_prompt: str) -> dict[str, Any]:
         content_str = (
             last_message.content if hasattr(last_message, "content") else str(last_message)
         )
+
+    # Add assistant response to session history and persist to MongoDB
+    if content_str:
+        state.messages.append({"role": "assistant", "content": content_str})
+    await save_session(state)
 
     # Extract tool calls from all messages
     tools_called = []
@@ -128,7 +144,7 @@ def create_agent(user_prompt: str) -> dict[str, Any]:
             pass
 
     # Parse content as JSON dict, fallback to raw string in dict if parsing fails
-    content_dict: dict[str, Any]
+    content_dict: Dict[str, Any]
     try:
         parsed = json.loads(content_str)
         # Ensure it's a dict
@@ -143,5 +159,11 @@ def create_agent(user_prompt: str) -> dict[str, Any]:
     # Build structured JSON response with result and metadata
     return {
         "result": content_dict,
-        "metadata": {"tools_called": tools_called, "message_count": len(result_messages)},
+        "metadata": {
+            "session_id": state.session_id,
+            "execution_id": state.execution_id,
+            "tools_called": tools_called,
+            "message_count": len(result_messages),
+            "conversation_turns": len(state.messages) // 2,
+        },
     }
